@@ -1442,7 +1442,7 @@ extension TextView: SearchControllerDelegate {
 
 // MARK: - UIGestureRecognizerDelegate
 extension TextView: UIGestureRecognizerDelegate {
-    override public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+    override open func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         if gestureRecognizer === tapGestureRecognizer {
             return !isEditing && !isDragging && !isDecelerating && delegateAllowsEditingToBegin
         } else {
