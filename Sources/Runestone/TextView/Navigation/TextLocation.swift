@@ -11,4 +11,9 @@ public struct TextLocation: Hashable, Equatable {
         self.lineNumber = linePosition.row
         self.column = linePosition.column
     }
+    
+    public init(line: Int, column: Int) {
+        self.lineNumber = line
+        self.column = column
+    }
 }
