@@ -18,6 +18,7 @@ final class LineFragmentRenderer {
     var markedTextBackgroundColor: UIColor = .systemFill
     var markedTextBackgroundCornerRadius: CGFloat = 0
     var highlightedRangeFragments: [HighlightedRangeFragment] = []
+    var diagnosticRangeFragments: [HighlightedRangeFragment] = []
 
     private var showInvisibleCharacters: Bool {
         invisibleCharacterConfiguration.showTabs
@@ -33,6 +34,7 @@ final class LineFragmentRenderer {
 
     func draw(to context: CGContext, inCanvasOfSize canvasSize: CGSize) {
         drawHighlightedRanges(to: context, inCanvasOfSize: canvasSize)
+        drawDiagnosticRanges(to: context, inCanvasOfSize: canvasSize)
         drawMarkedRange(to: context)
         drawInvisibleCharacters()
         drawText(to: context)
@@ -54,6 +56,36 @@ private extension LineFragmentRenderer {
                 endX = CTLineGetOffsetForStringIndex(lineFragment.line, highlightedRange.range.upperBound, nil)
             }
             let rect = CGRect(x: startX, y: 0, width: endX - startX, height: lineFragment.scaledSize.height)
+            let roundedCorners = highlightedRange.roundedCorners
+            context.setFillColor(highlightedRange.color.cgColor)
+            if !roundedCorners.isEmpty && highlightedRange.cornerRadius > 0 {
+                let cornerRadii = CGSize(width: highlightedRange.cornerRadius, height: highlightedRange.cornerRadius)
+                let bezierPath = UIBezierPath(roundedRect: rect, byRoundingCorners: roundedCorners, cornerRadii: cornerRadii)
+                context.addPath(bezierPath.cgPath)
+                context.fillPath()
+            } else {
+                context.fill(rect)
+            }
+        }
+        context.restoreGState()
+    }
+    
+    private func drawDiagnosticRanges(to context: CGContext, inCanvasOfSize canvasSize: CGSize) {
+        guard !diagnosticRangeFragments.isEmpty else {
+            return
+        }
+        context.saveGState()
+        for highlightedRange in diagnosticRangeFragments {
+            let startX = CTLineGetOffsetForStringIndex(lineFragment.line, highlightedRange.range.lowerBound, nil)
+            let endX: CGFloat
+            if shouldHighlightLineEnding(for: highlightedRange) {
+                endX = canvasSize.width
+            } else {
+                endX = CTLineGetOffsetForStringIndex(lineFragment.line, highlightedRange.range.upperBound, nil)
+            }
+            let diagnosticLineHeight: CGFloat = 2
+            let bottomPadding: CGFloat = 6
+            let rect = CGRect(x: startX, y: lineFragment.scaledSize.height - diagnosticLineHeight - bottomPadding, width: endX - startX, height: diagnosticLineHeight)
             let roundedCorners = highlightedRange.roundedCorners
             context.setFillColor(highlightedRange.color.cgColor)
             if !roundedCorners.isEmpty && highlightedRange.cornerRadius > 0 {

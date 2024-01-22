@@ -522,6 +522,15 @@ open class TextView: UIScrollView {
         }
     }
     /// Ranges in the text to be highlighted. The color defined by the background will be drawen behind the text.
+    public var diagnosticRanges: [HighlightedRange] {
+        get {
+            textInputView.diagnosticRanges
+        }
+        set {
+            textInputView.diagnosticRanges = newValue
+        }
+    }
+    /// Ranges in the text to be highlighted. The color defined by the background will be drawen behind the text.
     public var highlightedRanges: [HighlightedRange] {
         get {
             textInputView.highlightedRanges

@@ -65,6 +65,17 @@ final class LineFragmentController {
             }
         }
     }
+    var diagnosticRangeFragments: [HighlightedRangeFragment] {
+        get {
+            renderer.diagnosticRangeFragments
+        }
+        set {
+            if newValue != renderer.diagnosticRangeFragments {
+                renderer.diagnosticRangeFragments = newValue
+                lineFragmentView?.setNeedsDisplay()
+            }
+        }
+    }
 
     private let renderer: LineFragmentRenderer
 

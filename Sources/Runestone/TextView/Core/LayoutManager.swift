@@ -415,6 +415,8 @@ extension LayoutManager {
                 appearedLineFragmentIDs.insert(lineFragment.id)
                 lineFragmentController.highlightedRangeFragments = highlightService.highlightedRangeFragments(for: lineFragment,
                                                                                                               inLineWithID: line.id)
+                lineFragmentController.diagnosticRangeFragments = highlightService.diagnosticRangeFragments(for: lineFragment,
+                                                                                                              inLineWithID: line.id)
                 layoutLineFragmentView(for: lineFragmentController, lineYPosition: lineYPosition, lineFragmentFrame: &lineFragmentFrame)
                 maxY = lineFragmentFrame.maxY
             }

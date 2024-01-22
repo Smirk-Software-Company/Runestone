@@ -418,6 +418,18 @@ final class TextInputView: UIView, UITextInput {
             }
         }
     }
+    var diagnosticRanges: [HighlightedRange] {
+        get {
+            highlightService.diagnosticRanges
+        }
+        set {
+            if newValue != highlightService.diagnosticRanges {
+                highlightService.diagnosticRanges = newValue
+                layoutManager.setNeedsLayout()
+                layoutManager.layoutIfNeeded()
+            }
+        }
+    }
 
     // MARK: - Contents
     weak var delegate: TextInputViewDelegate?

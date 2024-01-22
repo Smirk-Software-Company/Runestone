@@ -15,9 +15,18 @@ final class HighlightService {
             }
         }
     }
+    var diagnosticRanges: [HighlightedRange] = [] {
+        didSet {
+            if diagnosticRanges != oldValue {
+                invalidateDiagnosticRangeFragments()
+            }
+        }
+    }
 
     private var highlightedRangeFragmentsPerLine: [DocumentLineNodeID: [HighlightedRangeFragment]] = [:]
     private var highlightedRangeFragmentsPerLineFragment: [LineFragmentID: [HighlightedRangeFragment]] = [:]
+    private var diagnosticRangeFragmentsPerLine: [DocumentLineNodeID: [HighlightedRangeFragment]] = [:]
+    private var diagnosticRangeFragmentsPerLineFragment: [LineFragmentID: [HighlightedRangeFragment]] = [:]
 
     init(lineManager: LineManager) {
         self.lineManager = lineManager
@@ -30,6 +39,16 @@ final class HighlightService {
             let highlightedLineFragments = createHighlightedLineFragments(for: lineFragment, inLineWithID: lineID)
             highlightedRangeFragmentsPerLineFragment[lineFragment.id] = highlightedLineFragments
             return highlightedLineFragments
+        }
+    }
+    
+    func diagnosticRangeFragments(for lineFragment: LineFragment, inLineWithID lineID: DocumentLineNodeID) -> [HighlightedRangeFragment] {
+        if let lineFragmentDiagnosticRangeFragments = diagnosticRangeFragmentsPerLineFragment[lineFragment.id] {
+            return lineFragmentDiagnosticRangeFragments
+        } else {
+            let diagnosticLineFragments = createDiagnosticLineFragments(for: lineFragment, inLineWithID: lineID)
+            diagnosticRangeFragmentsPerLineFragment[lineFragment.id] = diagnosticLineFragments
+            return diagnosticLineFragments
         }
     }
 }
@@ -86,6 +105,60 @@ private extension HighlightService {
                                             containsEnd: containsEnd,
                                             color: lineHighlightedRangeFragment.color,
                                             cornerRadius: lineHighlightedRangeFragment.cornerRadius)
+        }
+    }
+    
+    private func invalidateDiagnosticRangeFragments() {
+        diagnosticRangeFragmentsPerLine.removeAll()
+        diagnosticRangeFragmentsPerLineFragment.removeAll()
+        diagnosticRangeFragmentsPerLine = createDiagnosticRangeFragmentsPerLine()
+    }
+    
+    private func createDiagnosticRangeFragmentsPerLine() -> [DocumentLineNodeID: [HighlightedRangeFragment]] {
+        var result: [DocumentLineNodeID: [HighlightedRangeFragment]] = [:]
+        for diagnosticRange in diagnosticRanges where diagnosticRange.range.length > 0 {
+            let lines = lineManager.lines(in: diagnosticRange.range)
+            for line in lines {
+                let lineRange = NSRange(location: line.location, length: line.data.totalLength)
+                guard diagnosticRange.range.overlaps(lineRange) else {
+                    continue
+                }
+                let cappedRange = diagnosticRange.range.capped(to: lineRange)
+                let cappedLocalRange = cappedRange.local(to: lineRange)
+                let containsStart = cappedRange.lowerBound == diagnosticRange.range.lowerBound
+                let containsEnd = cappedRange.upperBound == diagnosticRange.range.upperBound
+                let highlightedRangeFragment = HighlightedRangeFragment(range: cappedLocalRange,
+                                                                        containsStart: containsStart,
+                                                                        containsEnd: containsEnd,
+                                                                        color: diagnosticRange.color,
+                                                                        cornerRadius: diagnosticRange.cornerRadius)
+                if let existingHighlightedRangeFragments = result[line.id] {
+                    result[line.id] = existingHighlightedRangeFragments + [highlightedRangeFragment]
+                } else {
+                    result[line.id] = [highlightedRangeFragment]
+                }
+            }
+        }
+        return result
+    }
+    
+    private func createDiagnosticLineFragments(for lineFragment: LineFragment,
+                                                inLineWithID lineID: DocumentLineNodeID) -> [HighlightedRangeFragment] {
+        guard let lineDiagnosticRangeFragments = diagnosticRangeFragmentsPerLine[lineID] else {
+            return []
+        }
+        return lineDiagnosticRangeFragments.compactMap { lineDiagnosticRangeFragment in
+            guard lineDiagnosticRangeFragment.range.overlaps(lineFragment.range) else {
+                return nil
+            }
+            let cappedRange = lineDiagnosticRangeFragment.range.capped(to: lineFragment.range)
+            let containsStart = lineDiagnosticRangeFragment.containsStart && cappedRange.lowerBound == lineDiagnosticRangeFragment.range.lowerBound
+            let containsEnd = lineDiagnosticRangeFragment.containsEnd && cappedRange.upperBound == lineDiagnosticRangeFragment.range.upperBound
+            return HighlightedRangeFragment(range: cappedRange,
+                                            containsStart: containsStart,
+                                            containsEnd: containsEnd,
+                                            color: lineDiagnosticRangeFragment.color,
+                                            cornerRadius: lineDiagnosticRangeFragment.cornerRadius)
         }
     }
 }
