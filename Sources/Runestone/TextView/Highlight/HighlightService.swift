@@ -5,6 +5,7 @@ final class HighlightService {
         didSet {
             if lineManager !== oldValue {
                 invalidateHighlightedRangeFragments()
+                invalidateDiagnosticRangeFragments()
             }
         }
     }
