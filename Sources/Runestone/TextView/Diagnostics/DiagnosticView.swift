@@ -12,7 +12,8 @@ final class DiagnosticView: UIView, ReusableView {
         
         button.backgroundColor = highestSeverity.color.withAlphaComponent(0.2)
         button.tintColor = highestSeverity.color
-        button.setImage(.init(systemName: highestSeverity.systemImage, withConfiguration: UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)), for: .normal)
+        let imageConfiguration = UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
+        button.setImage(.init(systemName: highestSeverity.systemImage, withConfiguration: imageConfiguration)?.withRenderingMode(.alwaysOriginal), for: .normal)
     }
     
     private let button: UIButton = {
@@ -41,6 +42,7 @@ final class DiagnosticView: UIView, ReusableView {
     }
     
     @objc func handleTap() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         print("tapped!!")
     }
 }
