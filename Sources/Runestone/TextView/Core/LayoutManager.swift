@@ -529,14 +529,13 @@ extension LayoutManager {
             diagnosticsContainerView.addSubview(diagnosticView)
         }
         let lineController = lineControllerStorage.getOrCreateLineController(for: line)
-        let fontLineHeight = max(theme.lineNumberFont.lineHeight, 24)
+        let diagnosticHeight = min(lineController.lineHeight, 32) - 4
         let xPosition = diagnosticGutterWidthService.gutterLeadingPadding
         var yPosition = textContainerInset.top + line.yPosition
         // Center the line number in the height of the line.
-        yPosition += (lineController.lineHeight - fontLineHeight) / 2
-        // TODO: this needs to be able to render our diagnostics properly
+        yPosition += (lineController.lineHeight - diagnosticHeight) / 2
         diagnosticView.setFromDiagnostics(diagnostics)
-        diagnosticView.frame = CGRect(x: xPosition, y: yPosition, width: diagnosticGutterWidthService.diagnosticWidth, height: fontLineHeight)
+        diagnosticView.frame = CGRect(x: xPosition, y: yPosition, width: diagnosticGutterWidthService.diagnosticWidth, height: diagnosticHeight)
     }
 
     private func layoutLineFragmentView(for lineFragmentController: LineFragmentController, lineYPosition: CGFloat, lineFragmentFrame: inout CGRect) {
