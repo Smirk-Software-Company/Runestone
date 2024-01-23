@@ -1463,6 +1463,15 @@ extension TextView: UIGestureRecognizerDelegate {
             return super.gestureRecognizerShouldBegin(gestureRecognizer)
         }
     }
+    
+    // Prevents gesture recognizers from firing alongside the diagnostic UIButtons
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        if touch.view?.isExclusiveTouch ?? false {
+            return false
+        }
+        
+        return true
+    }
 
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                                   shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {

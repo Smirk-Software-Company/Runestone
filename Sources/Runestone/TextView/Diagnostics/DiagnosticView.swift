@@ -17,6 +17,7 @@ final class DiagnosticView: UIView, ReusableView {
     
     private let button: UIButton = {
         let this = UIButton()
+        this.isExclusiveTouch = true
         this.layer.cornerRadius = 6
         this.layer.cornerCurve = .continuous
         this.clipsToBounds = true
