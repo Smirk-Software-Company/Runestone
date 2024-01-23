@@ -77,12 +77,7 @@ private extension LineFragmentRenderer {
         context.saveGState()
         for highlightedRange in diagnosticRangeFragments {
             let startX = CTLineGetOffsetForStringIndex(lineFragment.line, highlightedRange.range.lowerBound, nil)
-            let endX: CGFloat
-            if shouldHighlightLineEnding(for: highlightedRange) {
-                endX = canvasSize.width
-            } else {
-                endX = CTLineGetOffsetForStringIndex(lineFragment.line, highlightedRange.range.upperBound, nil)
-            }
+            let endX = CTLineGetOffsetForStringIndex(lineFragment.line, highlightedRange.range.upperBound, nil)
             let diagnosticLineHeight: CGFloat = 2
             let bottomPadding: CGFloat = 6
             let rect = CGRect(x: startX, y: lineFragment.scaledSize.height - diagnosticLineHeight - bottomPadding, width: endX - startX, height: diagnosticLineHeight)
