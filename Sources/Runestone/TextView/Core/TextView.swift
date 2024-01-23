@@ -1473,7 +1473,7 @@ extension TextView: UIGestureRecognizerDelegate {
         return true
     }
 
-    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+    open func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                                   shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         if let klass = NSClassFromString("UITextRangeAdjustmentGestureRecognizer") {
             if !textRangeAdjustmentGestureRecognizers.contains(otherGestureRecognizer) && otherGestureRecognizer.isKind(of: klass) {
