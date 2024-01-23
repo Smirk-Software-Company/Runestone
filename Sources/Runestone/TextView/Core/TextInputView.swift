@@ -349,6 +349,9 @@ final class TextInputView: UIView, UITextInput {
     var gutterWidth: CGFloat {
         gutterWidthService.gutterWidth
     }
+    var diagnosticGutterWidth: CGFloat {
+        diagnosticGutterWidthService.gutterWidth
+    }
     var lineHeightMultiplier: CGFloat = 1 {
         didSet {
             if lineHeightMultiplier != oldValue {
@@ -418,13 +421,14 @@ final class TextInputView: UIView, UITextInput {
             }
         }
     }
-    var diagnosticRanges: [HighlightedRange] {
+    var diagnostics: [Diagnostic] {
         get {
-            highlightService.diagnosticRanges
+            diagnosticService.diagnostics
         }
         set {
-            if newValue != highlightService.diagnosticRanges {
-                highlightService.diagnosticRanges = newValue
+            if newValue != diagnosticService.diagnostics {
+                diagnosticService.diagnostics = newValue
+                highlightService.diagnosticRanges = newValue.map({ .init(range: $0.range, color: $0.color) })
                 layoutManager.setNeedsLayout()
                 layoutManager.layoutIfNeeded()
             }
@@ -515,6 +519,14 @@ final class TextInputView: UIView, UITextInput {
             layoutManager.gutterParentView = newValue
         }
     }
+    weak var diagnosticGutterParentView: UIView? {
+        get {
+            layoutManager.diagnosticGutterParentView
+        }
+        set {
+            layoutManager.diagnosticGutterParentView = newValue
+        }
+    }
     var scrollViewSafeAreaInsets: UIEdgeInsets = .zero {
         didSet {
             if scrollViewSafeAreaInsets != oldValue {
@@ -524,6 +536,9 @@ final class TextInputView: UIView, UITextInput {
     }
     var gutterContainerView: UIView {
         layoutManager.gutterContainerView
+    }
+    var diagnosticGutterContainerView: UIView {
+        layoutManager.diagnosticGutterContainerView
     }
     private(set) var stringView = StringView() {
         didSet {
@@ -549,6 +564,7 @@ final class TextInputView: UIView, UITextInput {
                 caretRectService.lineManager = lineManager
                 selectionRectService.lineManager = lineManager
                 highlightService.lineManager = lineManager
+                diagnosticService.lineManager = lineManager
                 customTokenizer.lineManager = lineManager
             }
         }
@@ -578,10 +594,12 @@ final class TextInputView: UIView, UITextInput {
     private let lineMovementController: LineMovementController
     private let pageGuideController = PageGuideController()
     private let gutterWidthService: GutterWidthService
+    private let diagnosticGutterWidthService: DiagnosticGutterWidthService
     private let contentSizeService: ContentSizeService
     private let caretRectService: CaretRectService
     private let selectionRectService: SelectionRectService
     private let highlightService: HighlightService
+    private let diagnosticService: DiagnosticService
     private let invisibleCharacterConfiguration = InvisibleCharacterConfiguration()
     private var markedRange: NSRange? {
         get {
@@ -615,22 +633,27 @@ final class TextInputView: UIView, UITextInput {
         self.theme = theme
         lineManager = LineManager(stringView: stringView)
         highlightService = HighlightService(lineManager: lineManager)
+        diagnosticService = DiagnosticService(lineManager: lineManager)
         lineControllerFactory = LineControllerFactory(stringView: stringView,
                                                       highlightService: highlightService,
                                                       invisibleCharacterConfiguration: invisibleCharacterConfiguration)
         lineControllerStorage = LineControllerStorage(stringView: stringView, lineControllerFactory: lineControllerFactory)
         gutterWidthService = GutterWidthService(lineManager: lineManager)
+        diagnosticGutterWidthService = DiagnosticGutterWidthService()
         contentSizeService = ContentSizeService(lineManager: lineManager,
                                                 lineControllerStorage: lineControllerStorage,
                                                 gutterWidthService: gutterWidthService,
+                                                diagnosticGutterWidthService: diagnosticGutterWidthService,
                                                 invisibleCharacterConfiguration: invisibleCharacterConfiguration)
         caretRectService = CaretRectService(stringView: stringView,
                                             lineManager: lineManager,
                                             lineControllerStorage: lineControllerStorage,
-                                            gutterWidthService: gutterWidthService)
+                                            gutterWidthService: gutterWidthService,
+                                            diagnosticGutterWidthService: diagnosticGutterWidthService)
         selectionRectService = SelectionRectService(lineManager: lineManager,
                                                     contentSizeService: contentSizeService,
                                                     gutterWidthService: gutterWidthService,
+                                                    diagnosticGutterWidthService: diagnosticGutterWidthService,
                                                     caretRectService: caretRectService)
         layoutManager = LayoutManager(lineManager: lineManager,
                                       languageMode: languageMode,
@@ -638,9 +661,11 @@ final class TextInputView: UIView, UITextInput {
                                       lineControllerStorage: lineControllerStorage,
                                       contentSizeService: contentSizeService,
                                       gutterWidthService: gutterWidthService,
+                                      diagnosticGutterWidthService: diagnosticGutterWidthService,
                                       caretRectService: caretRectService,
                                       selectionRectService: selectionRectService,
                                       highlightService: highlightService,
+                                      diagnosticService: diagnosticService,
                                       invisibleCharacterConfiguration: invisibleCharacterConfiguration)
         indentController = IndentController(stringView: stringView,
                                             lineManager: lineManager,
@@ -987,7 +1012,7 @@ private extension TextInputView {
             // The width extension is used to make the page guide look "attached" to the right hand side, even when the scroll view bouncing on the right side.
             let maxContentOffsetX = contentSizeService.contentWidth - viewport.width
             let widthExtension = max(ceil(viewport.minX - maxContentOffsetX), 0)
-            let xPosition = gutterWidthService.gutterWidth + textContainerInset.left + pageGuideController.columnOffset
+            let xPosition = gutterWidthService.gutterWidth + diagnosticGutterWidthService.gutterWidth + textContainerInset.left + pageGuideController.columnOffset
             let width = max(bounds.width - xPosition + widthExtension, 0)
             let orrigin = CGPoint(x: xPosition, y: viewport.minY)
             let pageGuideSize = CGSize(width: width, height: viewport.height)

@@ -8,6 +8,7 @@ final class CaretRectService {
 
     private let lineControllerStorage: LineControllerStorage
     private let gutterWidthService: GutterWidthService
+    private let diagnosticGutterWidthService: DiagnosticGutterWidthService
     private var leadingLineSpacing: CGFloat {
         if showLineNumbers {
             return gutterWidthService.gutterWidth + textContainerInset.left
@@ -15,15 +16,20 @@ final class CaretRectService {
             return textContainerInset.left
         }
     }
+    private var trailingLineSpacing: CGFloat {
+        return diagnosticGutterWidthService.gutterWidth + textContainerInset.right
+    }
 
     init(stringView: StringView,
          lineManager: LineManager,
          lineControllerStorage: LineControllerStorage,
-         gutterWidthService: GutterWidthService) {
+         gutterWidthService: GutterWidthService,
+         diagnosticGutterWidthService: DiagnosticGutterWidthService) {
         self.stringView = stringView
         self.lineManager = lineManager
         self.lineControllerStorage = lineControllerStorage
         self.gutterWidthService = gutterWidthService
+        self.diagnosticGutterWidthService = diagnosticGutterWidthService
     }
 
     func caretRect(at location: Int, allowMovingCaretToNextLineFragment: Bool) -> CGRect {
@@ -33,10 +39,11 @@ final class CaretRectService {
         let lineLocalLocation = safeLocation - line.location
         if allowMovingCaretToNextLineFragment && shouldMoveCaretToNextLineFragment(forLocation: lineLocalLocation, in: line) {
             let rect = caretRect(at: location + 1, allowMovingCaretToNextLineFragment: false)
-            return CGRect(x: leadingLineSpacing, y: rect.minY, width: rect.width, height: rect.height)
+            return CGRect(x: leadingLineSpacing, y: rect.minY, width: rect.width - trailingLineSpacing, height: rect.height)
         } else {
             let localCaretRect = lineController.caretRect(atIndex: lineLocalLocation)
             let globalYPosition = line.yPosition + localCaretRect.minY
+            // TODO: might have to sub trailingLineSpacing here
             let globalRect = CGRect(x: localCaretRect.minX, y: globalYPosition, width: localCaretRect.width, height: localCaretRect.height)
             return globalRect.offsetBy(dx: leadingLineSpacing, dy: textContainerInset.top)
         }

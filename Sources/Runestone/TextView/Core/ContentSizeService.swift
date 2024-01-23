@@ -37,6 +37,7 @@ final class ContentSizeService {
             let preferredWidth = ceil(
                 textContentWidth
                 + gutterWidthService.gutterWidth
+                + diagnosticGutterWidthService.gutterWidth
                 + textContainerInset.left
                 + textContainerInset.right
                 + invisibleCharacterConfiguration.maximumLineBreakSymbolWidth
@@ -54,6 +55,7 @@ final class ContentSizeService {
 
     private let lineControllerStorage: LineControllerStorage
     private let gutterWidthService: GutterWidthService
+    private let diagnosticGutterWidthService: DiagnosticGutterWidthService
     private var lineIDTrackingWidth: DocumentLineNodeID?
     private var lineWidths: [DocumentLineNodeID: CGFloat] = [:]
     private var longestLineWidth: CGFloat? {
@@ -117,10 +119,12 @@ final class ContentSizeService {
     init(lineManager: LineManager,
          lineControllerStorage: LineControllerStorage,
          gutterWidthService: GutterWidthService,
+         diagnosticGutterWidthService: DiagnosticGutterWidthService,
          invisibleCharacterConfiguration: InvisibleCharacterConfiguration) {
         self.lineManager = lineManager
         self.lineControllerStorage = lineControllerStorage
         self.gutterWidthService = gutterWidthService
+        self.diagnosticGutterWidthService = diagnosticGutterWidthService
         self.invisibleCharacterConfiguration = invisibleCharacterConfiguration
     }
 

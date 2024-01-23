@@ -461,6 +461,10 @@ open class TextView: UIScrollView {
     public var gutterWidth: CGFloat {
         textInputView.gutterWidth
     }
+    /// Width of the diagnostic gutter.
+    public var diagnosticGutterWidth: CGFloat {
+        textInputView.diagnosticGutterWidth
+    }
     /// The line-height is multiplied with the value.
     public var lineHeightMultiplier: CGFloat {
         get {
@@ -521,13 +525,12 @@ open class TextView: UIScrollView {
             }
         }
     }
-    /// Ranges in the text to be highlighted. The color defined by the background will be drawen behind the text.
-    public var diagnosticRanges: [HighlightedRange] {
+    public var diagnostics: [Diagnostic] {
         get {
-            textInputView.diagnosticRanges
+            textInputView.diagnostics
         }
         set {
-            textInputView.diagnosticRanges = newValue
+            textInputView.diagnostics = newValue
         }
     }
     /// Ranges in the text to be highlighted. The color defined by the background will be drawen behind the text.
@@ -652,6 +655,7 @@ open class TextView: UIScrollView {
         backgroundColor = .white
         textInputView.delegate = self
         textInputView.gutterParentView = self
+        textInputView.diagnosticGutterParentView = self
         editableTextInteraction.textInput = textInputView
         nonEditableTextInteraction.textInput = textInputView
         editableTextInteraction.delegate = self
@@ -680,6 +684,7 @@ open class TextView: UIScrollView {
         textInputView.frame = CGRect(x: 0, y: 0, width: max(contentSize.width, frame.width), height: max(contentSize.height, frame.height))
         textInputView.viewport = CGRect(origin: contentOffset, size: frame.size)
         bringSubviewToFront(textInputView.gutterContainerView)
+        bringSubviewToFront(textInputView.diagnosticGutterContainerView)
     }
 
     /// Called when the safe area of the view changes.
@@ -1273,7 +1278,7 @@ private extension TextView {
         var viewport = CGRect(x: contentOffset.x, y: contentOffset.y, width: frame.width, height: frame.height)
         viewport.origin.y += adjustedContentInset.top
         viewport.origin.x += adjustedContentInset.left + gutterWidth
-        viewport.size.width -= adjustedContentInset.left + adjustedContentInset.right + gutterWidth
+        viewport.size.width -= adjustedContentInset.left + adjustedContentInset.right + gutterWidth + diagnosticGutterWidth
         viewport.size.height -= adjustedContentInset.top + adjustedContentInset.bottom
         // Construct the best possible content offset.
         var newContentOffset = contentOffset

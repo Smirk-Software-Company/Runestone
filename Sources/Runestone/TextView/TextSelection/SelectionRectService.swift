@@ -7,15 +7,18 @@ final class SelectionRectService {
 
     private let contentSizeService: ContentSizeService
     private let gutterWidthService: GutterWidthService
+    private let diagnosticGutterWidthService: DiagnosticGutterWidthService
     private let caretRectService: CaretRectService
 
     init(lineManager: LineManager,
          contentSizeService: ContentSizeService,
          gutterWidthService: GutterWidthService,
+         diagnosticGutterWidthService: DiagnosticGutterWidthService,
          caretRectService: CaretRectService) {
         self.lineManager = lineManager
         self.contentSizeService = contentSizeService
         self.gutterWidthService = gutterWidthService
+        self.diagnosticGutterWidthService = diagnosticGutterWidthService
         self.caretRectService = caretRectService
     }
 
@@ -26,12 +29,14 @@ final class SelectionRectService {
         guard let endLine = lineManager.line(containingCharacterAt: range.upperBound) else {
             return []
         }
+        // TODO: def need to do more with trailingLineSpacing here...
         let leadingLineSpacing = gutterWidthService.gutterWidth + textContainerInset.left
+        let trailingLineSpacing = diagnosticGutterWidthService.gutterWidth + textContainerInset.right
         let selectsLineEnding = range.upperBound == endLine.location
         let adjustedRange = NSRange(location: range.location, length: selectsLineEnding ? range.length - 1 : range.length)
         let startCaretRect = caretRectService.caretRect(at: adjustedRange.lowerBound, allowMovingCaretToNextLineFragment: true)
         let endCaretRect = caretRectService.caretRect(at: adjustedRange.upperBound, allowMovingCaretToNextLineFragment: false)
-        let fullWidth = max(contentSizeService.contentWidth, contentSizeService.scrollViewWidth) - leadingLineSpacing - textContainerInset.right
+        let fullWidth = max(contentSizeService.contentWidth, contentSizeService.scrollViewWidth) - leadingLineSpacing - trailingLineSpacing
         if startCaretRect.minY == endCaretRect.minY && startCaretRect.maxY == endCaretRect.maxY {
             // Selecting text in the same line fragment.
             let width = selectsLineEnding ? fullWidth - (startCaretRect.minX - leadingLineSpacing) : endCaretRect.maxX - startCaretRect.maxX

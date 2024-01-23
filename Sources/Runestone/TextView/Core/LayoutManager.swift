@@ -14,6 +14,13 @@ final class LayoutManager {
             }
         }
     }
+    weak var diagnosticGutterParentView: UIView? {
+        didSet {
+            if diagnosticGutterParentView != oldValue {
+                setupViewHierarchy()
+            }
+        }
+    }
     weak var textInputView: UIView? {
         didSet {
             if textInputView != oldValue {
@@ -41,9 +48,13 @@ final class LayoutManager {
                 gutterBackgroundView.backgroundColor = theme.gutterBackgroundColor
                 gutterBackgroundView.hairlineColor = theme.gutterHairlineColor
                 gutterBackgroundView.hairlineWidth = theme.gutterHairlineWidth
+                diagnosticGutterBackgroundView.backgroundColor = theme.gutterBackgroundColor
+                diagnosticGutterBackgroundView.hairlineColor = theme.gutterHairlineColor
+                diagnosticGutterBackgroundView.hairlineWidth = theme.gutterHairlineWidth
                 invisibleCharacterConfiguration.font = theme.font
                 invisibleCharacterConfiguration.textColor = theme.invisibleCharactersColor
                 gutterSelectionBackgroundView.backgroundColor = theme.selectedLinesGutterBackgroundColor
+                diagnosticGutterSelectionBackgroundView.backgroundColor = theme.selectedLinesGutterBackgroundColor
                 lineSelectionBackgroundView.backgroundColor = theme.selectedLineBackgroundColor
                 for lineController in lineControllerStorage {
                     lineController.theme = theme
@@ -94,7 +105,7 @@ final class LayoutManager {
     var lineHeightMultiplier: CGFloat = 1
     var constrainingLineWidth: CGFloat {
         if isLineWrappingEnabled {
-            return scrollViewWidth - leadingLineSpacing - textContainerInset.right - safeAreaInsets.left - safeAreaInsets.right
+            return scrollViewWidth - leadingLineSpacing - trailingLineSpacing - safeAreaInsets.left - safeAreaInsets.right
         } else {
             // Rendering multiple very long lines is very expensive. In order to let the editor remain useable,
             // we set a very high maximum line width when line wrapping is disabled.
@@ -111,13 +122,18 @@ final class LayoutManager {
 
     // MARK: - Views
     let gutterContainerView = UIView()
+    let diagnosticGutterContainerView = UIView()
     private var lineFragmentViewReuseQueue = ViewReuseQueue<LineFragmentID, LineFragmentView>()
     private var lineNumberLabelReuseQueue = ViewReuseQueue<DocumentLineNodeID, LineNumberView>()
+    private var diagnosticViewReuseQueue = ViewReuseQueue<DocumentLineNodeID, DiagnosticView>()
     private var visibleLineIDs: Set<DocumentLineNodeID> = []
     private let linesContainerView = UIView()
     private let gutterBackgroundView = GutterBackgroundView()
+    private let diagnosticGutterBackgroundView = GutterBackgroundView()
     private let lineNumbersContainerView = UIView()
+    private let diagnosticsContainerView = UIView()
     private let gutterSelectionBackgroundView = UIView()
+    private let diagnosticGutterSelectionBackgroundView = UIView()
     private let lineSelectionBackgroundView = UIView()
 
     // MARK: - Sizing
@@ -128,6 +144,9 @@ final class LayoutManager {
             return textContainerInset.left
         }
     }
+    private var trailingLineSpacing: CGFloat {
+        return diagnosticGutterWidthService.gutterWidth + textContainerInset.right
+    }
     private var insetViewport: CGRect {
         let x = viewport.minX - textContainerInset.left
         let y = viewport.minY - textContainerInset.top
@@ -137,9 +156,11 @@ final class LayoutManager {
     }
     private let contentSizeService: ContentSizeService
     private let gutterWidthService: GutterWidthService
+    private let diagnosticGutterWidthService: DiagnosticGutterWidthService
     private let caretRectService: CaretRectService
     private let selectionRectService: SelectionRectService
     private let highlightService: HighlightService
+    private let diagnosticService: DiagnosticService
 
     // MARK: - Rendering
     private let invisibleCharacterConfiguration: InvisibleCharacterConfiguration
@@ -153,9 +174,11 @@ final class LayoutManager {
          lineControllerStorage: LineControllerStorage,
          contentSizeService: ContentSizeService,
          gutterWidthService: GutterWidthService,
+         diagnosticGutterWidthService: DiagnosticGutterWidthService,
          caretRectService: CaretRectService,
          selectionRectService: SelectionRectService,
          highlightService: HighlightService,
+         diagnosticService: DiagnosticService,
          invisibleCharacterConfiguration: InvisibleCharacterConfiguration) {
         self.lineManager = lineManager
         self.languageMode = languageMode
@@ -164,14 +187,18 @@ final class LayoutManager {
         self.lineControllerStorage = lineControllerStorage
         self.contentSizeService = contentSizeService
         self.gutterWidthService = gutterWidthService
+        self.diagnosticGutterWidthService = diagnosticGutterWidthService
         self.caretRectService = caretRectService
         self.selectionRectService = selectionRectService
         self.highlightService = highlightService
+        self.diagnosticService = diagnosticService
         self.linesContainerView.isUserInteractionEnabled = false
         self.lineNumbersContainerView.isUserInteractionEnabled = false
         self.gutterContainerView.isUserInteractionEnabled = false
         self.gutterBackgroundView.isUserInteractionEnabled = false
         self.gutterSelectionBackgroundView.isUserInteractionEnabled = false
+        self.diagnosticGutterBackgroundView.isUserInteractionEnabled = false
+        self.diagnosticGutterSelectionBackgroundView.isUserInteractionEnabled = false
         self.lineSelectionBackgroundView.isUserInteractionEnabled = false
         self.updateShownViews()
         let memoryWarningNotificationName = UIApplication.didReceiveMemoryWarningNotification
@@ -243,7 +270,7 @@ extension LayoutManager {
         let lineController = lineControllerStorage.getOrCreateLineController(for: line)
         let localRange = NSRange(location: range.location - line.location, length: min(range.length, line.value))
         let lineContentsRect = lineController.firstRect(for: localRange)
-        let visibleWidth = viewport.width - gutterWidthService.gutterWidth
+        let visibleWidth = viewport.width - gutterWidthService.gutterWidth - diagnosticGutterWidthService.gutterWidth
         let xPosition = lineContentsRect.minX + textContainerInset.left + gutterWidthService.gutterWidth
         let yPosition = line.yPosition + lineContentsRect.minY + textContainerInset.top
         let width = min(lineContentsRect.width, visibleWidth)
@@ -320,14 +347,22 @@ extension LayoutManager {
         gutterContainerView.frame = CGRect(x: viewport.minX, y: 0, width: totalGutterWidth, height: contentSize.height)
         gutterBackgroundView.frame = CGRect(x: 0, y: viewport.minY, width: totalGutterWidth, height: viewport.height)
         lineNumbersContainerView.frame = CGRect(x: 0, y: 0, width: totalGutterWidth, height: contentSize.height)
+        
+        let totalDiagnosticGutterWidth = safeAreaInsets.right + diagnosticGutterWidthService.gutterWidth
+        // TODO: this might be wrong (maxX)
+        diagnosticGutterContainerView.frame = CGRect(x: viewport.maxX - totalDiagnosticGutterWidth, y: 0, width: totalDiagnosticGutterWidth, height: contentSize.height)
+        diagnosticGutterBackgroundView.frame = CGRect(x: 0, y: viewport.minY, width: totalDiagnosticGutterWidth, height: viewport.height)
+        diagnosticsContainerView.frame = CGRect(x: 0, y: 0, width: totalDiagnosticGutterWidth, height: contentSize.height)
     }
 
     private func layoutLineSelection() {
         if let rect = getLineSelectionRect() {
             let totalGutterWidth = safeAreaInsets.left + gutterWidthService.gutterWidth
+            let totalDiagnosticGutterWidth = safeAreaInsets.right + diagnosticGutterWidthService.gutterWidth
             gutterSelectionBackgroundView.frame = CGRect(x: 0, y: rect.minY, width: totalGutterWidth, height: rect.height)
+            diagnosticGutterSelectionBackgroundView.frame = CGRect(x: 0, y: rect.minY, width: totalDiagnosticGutterWidth, height: rect.height)
             let lineSelectionBackgroundOrigin = CGPoint(x: viewport.minX + totalGutterWidth, y: rect.minY)
-            let lineSelectionBackgroundSize = CGSize(width: scrollViewWidth - gutterWidthService.gutterWidth, height: rect.height)
+            let lineSelectionBackgroundSize = CGSize(width: scrollViewWidth - gutterWidthService.gutterWidth - diagnosticGutterWidthService.gutterWidth, height: rect.height)
             lineSelectionBackgroundView.frame = CGRect(origin: lineSelectionBackgroundOrigin, size: lineSelectionBackgroundSize)
         }
     }
@@ -406,6 +441,7 @@ extension LayoutManager {
             lineController.constrainingWidth = constrainingLineWidth
             lineController.prepareToDisplayString(in: lineLocalViewport, syntaxHighlightAsynchronously: true)
             layoutLineNumberView(for: line)
+            layoutDiagnosticView(for: line)
             // Layout line fragments ("sublines") in the line until we have filled the viewport.
             let lineYPosition = line.yPosition
             let lineFragmentControllers = lineController.lineFragmentControllers(in: insetViewport)
@@ -452,6 +488,7 @@ extension LayoutManager {
             lineController?.cancelSyntaxHighlighting()
         }
         lineNumberLabelReuseQueue.enqueueViews(withKeys: disappearedLineIDs)
+        diagnosticViewReuseQueue.enqueueViews(withKeys: disappearedLineIDs)
         lineFragmentViewReuseQueue.enqueueViews(withKeys: disappearedLineFragmentIDs)
         // Adjust the content offset on the Y-axis if necessary.
         if contentOffsetAdjustmentY != 0 {
@@ -481,6 +518,26 @@ extension LayoutManager {
         lineNumberView.textColor = theme.lineNumberColor
         lineNumberView.frame = CGRect(x: xPosition, y: yPosition, width: gutterWidthService.lineNumberWidth, height: fontLineHeight)
     }
+    
+    private func layoutDiagnosticView(for line: DocumentLineNode) {
+        let diagnosticView = diagnosticViewReuseQueue.dequeueView(forKey: line.id)
+        let diagnostics = diagnosticService.diagnostics(for: line)
+        if diagnostics.isEmpty {
+            diagnosticView.removeFromSuperview()
+            return
+        } else if diagnosticView.superview == nil {
+            diagnosticsContainerView.addSubview(diagnosticView)
+        }
+        let lineController = lineControllerStorage.getOrCreateLineController(for: line)
+        let fontLineHeight = max(theme.lineNumberFont.lineHeight, 24)
+        let xPosition = diagnosticGutterWidthService.gutterLeadingPadding
+        var yPosition = textContainerInset.top + line.yPosition
+        // Center the line number in the height of the line.
+        yPosition += (lineController.lineHeight - fontLineHeight) / 2
+        // TODO: this needs to be able to render our diagnostics properly
+        diagnosticView.setFromDiagnostics(diagnostics)
+        diagnosticView.frame = CGRect(x: xPosition, y: yPosition, width: diagnosticGutterWidthService.diagnosticWidth, height: fontLineHeight)
+    }
 
     private func layoutLineFragmentView(for lineFragmentController: LineFragmentController, lineYPosition: CGFloat, lineFragmentFrame: inout CGRect) {
         let lineFragment = lineFragmentController.lineFragment
@@ -490,7 +547,7 @@ extension LayoutManager {
         }
         lineFragmentController.lineFragmentView = lineFragmentView
         let lineFragmentOrigin = CGPoint(x: leadingLineSpacing, y: textContainerInset.top + lineYPosition + lineFragment.yPosition)
-        let lineFragmentWidth = contentSizeService.contentWidth - leadingLineSpacing - textContainerInset.right
+        let lineFragmentWidth = contentSizeService.contentWidth - leadingLineSpacing - trailingLineSpacing
         let lineFragmentSize = CGSize(width: lineFragmentWidth, height: lineFragment.scaledSize.height)
         lineFragmentFrame = CGRect(origin: lineFragmentOrigin, size: lineFragmentSize)
         lineFragmentView.frame = lineFragmentFrame
@@ -519,6 +576,10 @@ extension LayoutManager {
         gutterBackgroundView.removeFromSuperview()
         gutterSelectionBackgroundView.removeFromSuperview()
         lineNumbersContainerView.removeFromSuperview()
+        diagnosticGutterContainerView.removeFromSuperview()
+        diagnosticGutterBackgroundView.removeFromSuperview()
+        diagnosticGutterSelectionBackgroundView.removeFromSuperview()
+        diagnosticsContainerView.removeFromSuperview()
         let allLineNumberKeys = lineFragmentViewReuseQueue.visibleViews.keys
         lineFragmentViewReuseQueue.enqueueViews(withKeys: Set(allLineNumberKeys))
         // Add views to view hierarchy
@@ -528,6 +589,10 @@ extension LayoutManager {
         gutterContainerView.addSubview(gutterBackgroundView)
         gutterContainerView.addSubview(gutterSelectionBackgroundView)
         gutterContainerView.addSubview(lineNumbersContainerView)
+        diagnosticGutterParentView?.addSubview(diagnosticGutterContainerView)
+        diagnosticGutterContainerView.addSubview(diagnosticGutterBackgroundView)
+        diagnosticGutterContainerView.addSubview(diagnosticGutterSelectionBackgroundView)
+        diagnosticGutterContainerView.addSubview(diagnosticsContainerView)
     }
 
     private func updateShownViews() {
@@ -535,6 +600,7 @@ extension LayoutManager {
         gutterBackgroundView.isHidden = !showLineNumbers
         lineNumbersContainerView.isHidden = !showLineNumbers
         gutterSelectionBackgroundView.isHidden = !lineSelectionDisplayType.shouldShowLineSelection || !showLineNumbers || !isEditing
+        diagnosticGutterSelectionBackgroundView.isHidden = !lineSelectionDisplayType.shouldShowLineSelection || !isEditing
         lineSelectionBackgroundView.isHidden = !lineSelectionDisplayType.shouldShowLineSelection || !isEditing || selectedLength > 0
     }
 }
