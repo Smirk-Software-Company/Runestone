@@ -43,6 +43,16 @@ final class HighlightService {
         }
     }
     
+    func highlightedRanges(for lineId: DocumentLineNodeID) -> [NSRange] {
+        var result: [NSRange] = []
+        
+        if let highlights = highlightedRangeFragmentsPerLine[lineId] {
+            result.append(contentsOf: highlights.map({ $0.range }))
+        }
+        
+        return result
+    }
+    
     func diagnosticRangeFragments(for lineFragment: LineFragment, inLineWithID lineID: DocumentLineNodeID) -> [HighlightedRangeFragment] {
         if let lineFragmentDiagnosticRangeFragments = diagnosticRangeFragmentsPerLineFragment[lineFragment.id] {
             return lineFragmentDiagnosticRangeFragments

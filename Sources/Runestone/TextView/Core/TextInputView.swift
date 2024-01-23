@@ -415,6 +415,8 @@ final class TextInputView: UIView, UITextInput {
         }
         set {
             if newValue != highlightService.highlightedRanges {
+                // invalidate typesetter on all old lines
+                // invalidate typesetter on new lines
                 highlightService.highlightedRanges = newValue
                 layoutManager.setNeedsLayout()
                 layoutManager.layoutIfNeeded()

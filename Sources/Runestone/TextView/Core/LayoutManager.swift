@@ -456,6 +456,7 @@ extension LayoutManager {
                 layoutLineFragmentView(for: lineFragmentController, lineYPosition: lineYPosition, lineFragmentFrame: &lineFragmentFrame)
                 maxY = lineFragmentFrame.maxY
             }
+            lineController.invalidateTypesetter()
             // The line fragments have now been created and we can set the marked and highlighted ranges on them.
             if let markedRange = markedRange {
                 let lineRange = NSRange(location: lineController.line.location, length: lineController.line.data.totalLength)

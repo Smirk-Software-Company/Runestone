@@ -117,7 +117,7 @@ final class LineController {
         self.stringView = stringView
         self.invisibleCharacterConfiguration = invisibleCharacterConfiguration
         self.highlightService = highlightService
-        self.typesetter = LineTypesetter(lineID: line.id.rawValue)
+        self.typesetter = LineTypesetter(lineID: line.id, highlightService: highlightService)
         let rootLineFragmentNodeData = LineFragmentNodeData(lineFragment: nil)
         self.lineFragmentTree = LineFragmentTree(minimumValue: 0, rootValue: 0, rootData: rootLineFragmentNodeData)
     }
@@ -152,6 +152,10 @@ final class LineController {
         isDefaultAttributesInvalid = true
         isSyntaxHighlightingInvalid = true
         _lineHeight = nil
+    }
+    
+    func invalidateTypesetter() {
+        isTypesetterInvalid = true
     }
 
     func lineFragmentControllers(in rect: CGRect) -> [LineFragmentController] {

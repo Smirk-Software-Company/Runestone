@@ -1,6 +1,7 @@
 import CoreGraphics
 import CoreText
 import Foundation
+import UIKit
 
 private final class TypesetResult {
     let lineFragments: [LineFragment]
@@ -50,8 +51,9 @@ final class LineTypesetter {
     var typesetLength: Int {
         startOffset
     }
-
-    private let lineID: String
+    
+    private let highlightService: HighlightService
+    private let lineID: DocumentLineNodeID
     private var stringLength = 0
     private var attributedString: NSAttributedString?
     private var typesetter: CTTypesetter?
@@ -60,8 +62,9 @@ final class LineTypesetter {
     private var nextYPosition: CGFloat = 0
     private var lineFragmentIndex = 0
 
-    init(lineID: String) {
+    init(lineID: DocumentLineNodeID, highlightService: HighlightService) {
         self.lineID = lineID
+        self.highlightService = highlightService
     }
 
     func reset() {
@@ -76,7 +79,12 @@ final class LineTypesetter {
         lineFragmentIndex = 0
     }
 
-    func prepareToTypeset(_ attributedString: NSAttributedString) {
+    func prepareToTypeset(_ attributedString: NSMutableAttributedString) {
+//        print("preparing to typeset!")
+//        for range in highlightService.highlightedRanges(for: lineID) {
+//            print("highlighting range!!")
+//            attributedString.addAttribute(.foregroundColor, value: UIColor.white, range: range)
+//        }
         self.attributedString = attributedString
         stringLength = CFAttributedStringGetLength(attributedString)
         typesetter = CTTypesetterCreateWithAttributedString(attributedString)
@@ -230,7 +238,7 @@ private extension LineTypesetter {
         let height = ascent + descent + leading
         let baseSize = CGSize(width: width, height: height)
         let scaledSize = CGSize(width: width, height: height * lineFragmentHeightMultiplier)
-        let id = LineFragmentID(lineId: lineID, lineFragmentIndex: lineFragmentIndex)
+        let id = LineFragmentID(lineId: lineID.rawValue, lineFragmentIndex: lineFragmentIndex)
         let visibleRange = NSRange(location: visibleRange.location, length: visibleRange.length)
         return LineFragment(
             id: id,
