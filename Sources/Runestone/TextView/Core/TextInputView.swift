@@ -428,7 +428,7 @@ final class TextInputView: UIView, UITextInput {
         set {
             if newValue != diagnosticService.diagnostics {
                 diagnosticService.diagnostics = newValue
-                highlightService.diagnosticRanges = newValue.map({ .init(range: $0.range, color: $0.color) })
+                highlightService.diagnosticRanges = newValue.sorted(by: { $0.severity.rawValue > $1.severity.rawValue }).map({ .init(range: $0.range, color: $0.color) })
                 layoutManager.setNeedsLayout()
                 layoutManager.layoutIfNeeded()
             }
