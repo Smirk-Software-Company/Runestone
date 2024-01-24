@@ -125,7 +125,7 @@ final class LayoutManager {
     let diagnosticGutterContainerView = UIView()
     private var lineFragmentViewReuseQueue = ViewReuseQueue<LineFragmentID, LineFragmentView>()
     private var lineNumberLabelReuseQueue = ViewReuseQueue<DocumentLineNodeID, LineNumberView>()
-    private var diagnosticViewReuseQueue = ViewReuseQueue<DocumentLineNodeID, DiagnosticView>()
+    private var diagnosticViewReuseQueue = ViewReuseQueue<DocumentLineNodeID, DiagnosticGutterView>()
     private var visibleLineIDs: Set<DocumentLineNodeID> = []
     private let linesContainerView = UIView()
     private let gutterBackgroundView = GutterBackgroundView()

@@ -1,7 +1,13 @@
 import UIKit
 
-final class DiagnosticView: UIView, ReusableView {
-    func setFromDiagnostics(_ diagnostics: [Diagnostic]) {
+final class DiagnosticGutterView: UIView, ReusableView {
+    weak var diagnosticService: DiagnosticService?
+    
+    private var line: DocumentLineNode?
+    
+    func setFromDiagnostics(_ diagnostics: [Diagnostic], for line: DocumentLineNode) {
+        self.line = line
+        
         let highestSeverity = diagnostics.reduce(diagnostics[0].severity, { a, b in
             if a.rawValue < b.severity.rawValue {
                 return a
@@ -42,7 +48,10 @@ final class DiagnosticView: UIView, ReusableView {
     }
     
     @objc func handleTap() {
+        guard let diagnosticService, let line else { return }
+        
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        print("tapped!!")
+        
+        diagnosticService.revealDiagnostics(for: line)
     }
 }
