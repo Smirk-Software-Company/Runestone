@@ -125,7 +125,7 @@ final class LayoutManager {
     let diagnosticGutterContainerView = UIView()
     private var lineFragmentViewReuseQueue = ViewReuseQueue<LineFragmentID, LineFragmentView>()
     private var lineNumberLabelReuseQueue = ViewReuseQueue<DocumentLineNodeID, LineNumberView>()
-    private var diagnosticViewReuseQueue = ViewReuseQueue<DocumentLineNodeID, DiagnosticGutterView>()
+    private var diagnosticGutterViewReuseQueue = ViewReuseQueue<DocumentLineNodeID, DiagnosticGutterView>()
     private var visibleLineIDs: Set<DocumentLineNodeID> = []
     private let linesContainerView = UIView()
     private let gutterBackgroundView = GutterBackgroundView()
@@ -488,7 +488,7 @@ extension LayoutManager {
             lineController?.cancelSyntaxHighlighting()
         }
         lineNumberLabelReuseQueue.enqueueViews(withKeys: disappearedLineIDs)
-        diagnosticViewReuseQueue.enqueueViews(withKeys: disappearedLineIDs)
+        diagnosticGutterViewReuseQueue.enqueueViews(withKeys: disappearedLineIDs)
         lineFragmentViewReuseQueue.enqueueViews(withKeys: disappearedLineFragmentIDs)
         // Adjust the content offset on the Y-axis if necessary.
         if contentOffsetAdjustmentY != 0 {
@@ -520,7 +520,7 @@ extension LayoutManager {
     }
     
     private func layoutDiagnosticView(for line: DocumentLineNode) {
-        let diagnosticView = diagnosticViewReuseQueue.dequeueView(forKey: line.id)
+        let diagnosticView = diagnosticGutterViewReuseQueue.dequeueView(forKey: line.id)
         let diagnostics = diagnosticService.diagnostics(for: line)
         if diagnostics.isEmpty {
             diagnosticView.removeFromSuperview()
