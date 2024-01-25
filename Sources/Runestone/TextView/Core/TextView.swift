@@ -597,6 +597,10 @@ open class TextView: UIScrollView {
     public var findInteraction: UIFindInteraction? {
         textSearchingHelper.findInteraction
     }
+    
+    var estimatedLineHeight: CGFloat {
+        textInputView.estimatedLineHeight
+    }
 
     private let textInputView: TextInputView
     private let editableTextInteraction = UITextInteraction(for: .editable)
@@ -1001,6 +1005,16 @@ extension TextView {
     public func textRange(from fromPosition: UITextPosition, to toPosition: UITextPosition) -> UITextRange? {
         textInputView.textRange(from: fromPosition, to: toPosition)
     }
+    
+    public func textRange(from range: NSRange) -> UITextRange? {
+        if let start = position(from: beginningOfDocument, offset: range.location),
+           let end = position(from: beginningOfDocument, offset: range.location + range.length),
+           let textRange = textInputView.textRange(from: start, to: end) {
+            return textRange
+        }
+        
+        return nil
+    }
 
     /// Returns the text position at a specified offset from another text position.
     /// - Parameters:
@@ -1136,29 +1150,15 @@ private extension TextView {
             return
         }
         if gestureRecognizer.state == .ended {
+            print("handle runestone tap")
             let point = gestureRecognizer.location(in: textInputView)
-            
-            if let textPosition = closestPosition(to: point),
-               let range = tokenizer.rangeEnclosingPosition(textPosition, with: .word, inDirection: .layout(.right)),
-               !range.isEmpty {
-                print("atomic tap!!")
-                let start = offset(from: beginningOfDocument, to: range.start)
-                highlightedRanges = [.init(range: .init(location: start, length: offset(from: beginningOfDocument, to: range.end) - start), color: .blue, cornerRadius: 6)]
-                
-                insertionPointColor = .clear
-                selectionBarColor = .clear
-                selectionHighlightColor = .clear
-                
-                selectHighlightedRange(at: 0)
-            } else {
-                let oldSelectedRange = textInputView.selectedRange
-                textInputView.moveCaret(to: point)
-                if textInputView.selectedRange != oldSelectedRange {
-                    layoutIfNeeded()
-                }
-                installEditableInteraction()
-                becomeFirstResponder()
+            let oldSelectedRange = textInputView.selectedRange
+            textInputView.moveCaret(to: point)
+            if textInputView.selectedRange != oldSelectedRange {
+                layoutIfNeeded()
             }
+            installEditableInteraction()
+            becomeFirstResponder()
         }
     }
     
@@ -1168,15 +1168,8 @@ private extension TextView {
         if let textPosition = closestPosition(to: point),
            let range = tokenizer.rangeEnclosingPosition(textPosition, with: .word, inDirection: .layout(.right)),
            !range.isEmpty {
+            atomicallySelect(range: range)
             print("atomic tap!!")
-            let start = offset(from: beginningOfDocument, to: range.start)
-            highlightedRanges = [.init(range: .init(location: start, length: offset(from: beginningOfDocument, to: range.end) - start), color: .blue, cornerRadius: 6)]
-            
-            insertionPointColor = .clear
-            selectionBarColor = .clear
-            selectionHighlightColor = .clear
-            
-            selectHighlightedRange(at: 0)
         }
     }
 
@@ -1281,7 +1274,7 @@ private extension TextView {
     }
 
     private func installEditableInteraction() {
-        if editableTextInteraction.view == nil && false {
+        if editableTextInteraction.view == nil {
             isInputAccessoryViewEnabled = true
             textInputView.removeInteraction(nonEditableTextInteraction)
             textInputView.addInteraction(editableTextInteraction)
@@ -1381,6 +1374,10 @@ extension TextView: TextInputViewDelegate {
         isEditing = false
         installNonEditableInteraction()
         editorDelegate?.textViewDidEndEditing(self)
+        
+        if textInputView.atomicSelection != nil {
+            removeAtomicSelection()
+        }
     }
 
     func textInputViewDidChange(_ view: TextInputView) {
@@ -1397,6 +1394,10 @@ extension TextView: TextInputViewDelegate {
             scrollLocationToVisible(newRange.location)
         }
         editorDelegate?.textViewDidChangeSelection(self)
+        
+        if let selectedTextRange, let atomicSelection = view.atomicSelection, !selectedTextRange.equalTo(atomicSelection, in: textInputView) {
+            removeAtomicSelection()
+        }
     }
 
     func textInputViewDidInvalidateContentSize(_ view: TextInputView) {
@@ -1540,7 +1541,19 @@ extension TextView: KeyboardObserverDelegate {
 extension TextView: UITextInteractionDelegate {
     public func interactionShouldBegin(_ interaction: UITextInteraction, at point: CGPoint) -> Bool {
         if interaction.textInteractionMode == .editable {
-            return isEditable
+            var isNewAtomicSelection = false
+            
+            if let range = atomicTapGestureRecognizer.range {
+                if let atomicSelection = textInputView.atomicSelection {
+                    isNewAtomicSelection = !range.equalTo(atomicSelection, in: textInputView)
+                } else {
+                    isNewAtomicSelection = true
+                }
+            }
+            
+            print("interaction should begin -- atomic", !isNewAtomicSelection)
+            
+            return isEditable && !isNewAtomicSelection
         } else if interaction.textInteractionMode == .nonEditable {
             // The private UITextLoupeInteraction and UITextNonEditableInteractionclass will end up in this case. The latter is likely created from UITextInteraction(for: .nonEditable) but we want to disable both when selection is disabled.
             return isSelectable
@@ -1565,3 +1578,30 @@ extension TextView: UITextInteractionDelegate {
     }
 }
 // swiftlint:enable type_body_length
+
+extension TextView {
+    public func atomicallySelect(range: UITextRange) {
+        textInputView.atomicSelection = range
+        
+        let start = offset(from: beginningOfDocument, to: range.start)
+        highlightedRanges = [.init(range: .init(location: start, length: offset(from: beginningOfDocument, to: range.end) - start), color: UIColor(red: 42 / 255, green: 120 / 255, blue: 235 / 255, alpha: 1), cornerRadius: 6)]
+        
+        insertionPointColor = .clear
+        selectionBarColor = .clear
+        selectionHighlightColor = .clear
+        
+        selectHighlightedRange(at: 0)
+    }
+    
+    func removeAtomicSelection() {
+        textInputView.atomicSelection = nil
+        highlightedRanges = []
+        textInputView.resetSelectionColors()
+    }
+}
+
+extension UITextRange {
+    func equalTo(_ other: UITextRange, in textView: TextInputView) -> Bool {
+        return textView.compare(self.start, to: other.start) == .orderedSame && textView.compare(self.end, to: other.end) == .orderedSame
+    }
+}
