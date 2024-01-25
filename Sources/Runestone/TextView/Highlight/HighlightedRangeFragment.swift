@@ -7,15 +7,16 @@ final class HighlightedRangeFragment: Equatable {
     let color: UIColor
     let cornerRadius: CGFloat
     var roundedCorners: UIRectCorner {
-        if containsStart && containsEnd {
-            return .allCorners
-        } else if containsStart {
-            return [.topLeft, .bottomLeft]
-        } else if containsEnd {
-            return [.topRight, .bottomRight]
-        } else {
-            return []
-        }
+        return .allCorners
+//        if containsStart && containsEnd {
+//            return .allCorners
+//        } else if containsStart {
+//            return [.topLeft, .bottomLeft]
+//        } else if containsEnd {
+//            return [.topRight, .bottomRight]
+//        } else {
+//            return []
+//        }
     }
 
     init(range: NSRange, containsStart: Bool, containsEnd: Bool, color: UIColor, cornerRadius: CGFloat) {
