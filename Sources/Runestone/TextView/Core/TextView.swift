@@ -607,6 +607,7 @@ open class TextView: UIScrollView {
     }
     private var _editMenuInteraction: Any?
     private let tapGestureRecognizer = QuickTapGestureRecognizer()
+    private let atomicTapGestureRecognizer = AtomicTapGesture()
     private var _inputAccessoryView: UIView?
     private let _inputAssistantItem = UITextInputAssistantItem()
     private var isPerformingNonEditableTextInteraction = false
@@ -664,6 +665,9 @@ open class TextView: UIScrollView {
         tapGestureRecognizer.delegate = self
         tapGestureRecognizer.addTarget(self, action: #selector(handleTap(_:)))
         addGestureRecognizer(tapGestureRecognizer)
+        atomicTapGestureRecognizer.delegate = self
+        atomicTapGestureRecognizer.addTarget(self, action: #selector(handleAtomicTap))
+        addGestureRecognizer(atomicTapGestureRecognizer)
         installNonEditableInteraction()
         keyboardObserver.delegate = self
         highlightNavigationController.delegate = self
@@ -1133,13 +1137,46 @@ private extension TextView {
         }
         if gestureRecognizer.state == .ended {
             let point = gestureRecognizer.location(in: textInputView)
-            let oldSelectedRange = textInputView.selectedRange
-            textInputView.moveCaret(to: point)
-            if textInputView.selectedRange != oldSelectedRange {
-                layoutIfNeeded()
+            
+            if let textPosition = closestPosition(to: point),
+               let range = tokenizer.rangeEnclosingPosition(textPosition, with: .word, inDirection: .layout(.right)),
+               !range.isEmpty {
+                print("atomic tap!!")
+                let start = offset(from: beginningOfDocument, to: range.start)
+                highlightedRanges = [.init(range: .init(location: start, length: offset(from: beginningOfDocument, to: range.end) - start), color: .blue, cornerRadius: 6)]
+                
+                insertionPointColor = .clear
+                selectionBarColor = .clear
+                selectionHighlightColor = .clear
+                
+                selectHighlightedRange(at: 0)
+            } else {
+                let oldSelectedRange = textInputView.selectedRange
+                textInputView.moveCaret(to: point)
+                if textInputView.selectedRange != oldSelectedRange {
+                    layoutIfNeeded()
+                }
+                installEditableInteraction()
+                becomeFirstResponder()
             }
-            installEditableInteraction()
-            becomeFirstResponder()
+        }
+    }
+    
+    @objc private func handleAtomicTap(_ gestureRecognizer: UITapGestureRecognizer) {
+        let point = gestureRecognizer.location(in: textInputView)
+        
+        if let textPosition = closestPosition(to: point),
+           let range = tokenizer.rangeEnclosingPosition(textPosition, with: .word, inDirection: .layout(.right)),
+           !range.isEmpty {
+            print("atomic tap!!")
+            let start = offset(from: beginningOfDocument, to: range.start)
+            highlightedRanges = [.init(range: .init(location: start, length: offset(from: beginningOfDocument, to: range.end) - start), color: .blue, cornerRadius: 6)]
+            
+            insertionPointColor = .clear
+            selectionBarColor = .clear
+            selectionHighlightColor = .clear
+            
+            selectHighlightedRange(at: 0)
         }
     }
 
@@ -1244,10 +1281,13 @@ private extension TextView {
     }
 
     private func installEditableInteraction() {
-        if editableTextInteraction.view == nil {
+        if editableTextInteraction.view == nil && false {
             isInputAccessoryViewEnabled = true
             textInputView.removeInteraction(nonEditableTextInteraction)
             textInputView.addInteraction(editableTextInteraction)
+            for gestureRecognizer in nonEditableTextInteraction.gesturesForFailureRequirements {
+                gestureRecognizer.require(toFail: atomicTapGestureRecognizer)
+            }
             #if compiler(>=5.9)
             if #available(iOS 17, *) {
                 // Workaround a bug where the caret does not appear until the user taps again on iOS 17 (FB12622609).
