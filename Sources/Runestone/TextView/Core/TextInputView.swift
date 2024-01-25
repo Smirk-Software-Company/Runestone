@@ -1062,6 +1062,11 @@ private extension TextInputView {
 extension TextInputView {
     func beginFloatingCursor(at point: CGPoint) {
         if floatingCaretView == nil, let position = closestPosition(to: point) {
+            // Reset insertion & selection colors in case they were set to clear
+            insertionPointColor = .label
+            selectionBarColor = .label
+            selectionHighlightColor = .label.withAlphaComponent(0.2)
+            
             insertionPointColorBeforeFloatingBegan = insertionPointColor
             insertionPointColor = insertionPointColorBeforeFloatingBegan.withAlphaComponent(0.5)
             updateCaretColor()
