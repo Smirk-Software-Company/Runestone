@@ -667,6 +667,7 @@ final class TextInputView: UIView, UITextInput {
                                       highlightService: highlightService,
                                       diagnosticService: diagnosticService,
                                       invisibleCharacterConfiguration: invisibleCharacterConfiguration)
+        diagnosticService.layoutManager = layoutManager
         indentController = IndentController(stringView: stringView,
                                             lineManager: lineManager,
                                             languageMode: languageMode,

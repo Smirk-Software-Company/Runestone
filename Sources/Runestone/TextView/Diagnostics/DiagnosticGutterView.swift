@@ -28,7 +28,6 @@ final class DiagnosticGutterView: UIView, ReusableView {
         this.layer.cornerRadius = 6
         this.layer.cornerCurve = .continuous
         this.clipsToBounds = true
-        this.imageView?.contentMode = .center
         return this
     }()
 
@@ -50,7 +49,7 @@ final class DiagnosticGutterView: UIView, ReusableView {
     @objc func handleTap() {
         guard let diagnosticService, let line else { return }
         
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.75)
         
         diagnosticService.revealDiagnostics(for: line)
     }

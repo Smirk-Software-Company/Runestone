@@ -1,6 +1,6 @@
 import UIKit
 
-public final class Diagnostic {
+public struct Diagnostic: Hashable {
     public let id: String
     public let range: NSRange
     public let severity: Severity
@@ -16,10 +16,20 @@ public final class Diagnostic {
     var color: UIColor {
         return severity.color
     }
+    
+    var attributedString: NSAttributedString {
+        if #available(iOS 15, *) {
+            if let str = try? NSAttributedString(markdown: message) {
+                return str
+            }
+        }
+        
+        return NSAttributedString(string: message)
+    }
 }
 
 extension Diagnostic {
-    public enum Severity: Int, Equatable {
+    public enum Severity: Int, Equatable, Hashable {
         case error = 1
         case warning = 2
         case information = 3

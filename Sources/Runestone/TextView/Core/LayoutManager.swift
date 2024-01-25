@@ -126,6 +126,7 @@ final class LayoutManager {
     private var lineFragmentViewReuseQueue = ViewReuseQueue<LineFragmentID, LineFragmentView>()
     private var lineNumberLabelReuseQueue = ViewReuseQueue<DocumentLineNodeID, LineNumberView>()
     private var diagnosticGutterViewReuseQueue = ViewReuseQueue<DocumentLineNodeID, DiagnosticGutterView>()
+    private var diagnosticDetailViewReuseQueue = ViewReuseQueue<DocumentLineNodeID, DiagnosticDetailCarouselView>()
     private var visibleLineIDs: Set<DocumentLineNodeID> = []
     private let linesContainerView = UIView()
     private let gutterBackgroundView = GutterBackgroundView()
@@ -137,6 +138,9 @@ final class LayoutManager {
     private let lineSelectionBackgroundView = UIView()
 
     // MARK: - Sizing
+    var insetWidth: CGFloat {
+        return contentSizeService.contentWidth - leadingLineSpacing - trailingLineSpacing
+    }
     private var leadingLineSpacing: CGFloat {
         if showLineNumbers {
             return gutterWidthService.gutterWidth + textContainerInset.left
@@ -407,7 +411,7 @@ extension LayoutManager {
             let lineController = lineControllerStorage.getOrCreateLineController(for: line)
             lineController.constrainingWidth = constrainingLineWidth
             lineController.prepareToDisplayString(toLocation: endTypesettingLocation, syntaxHighlightAsynchronously: true)
-            let lineSize = CGSize(width: lineController.lineWidth, height: lineController.lineHeight)
+            let lineSize = CGSize(width: lineController.lineWidth, height: lineController.lineHeight + diagnosticService.totalDiagnosticsDetailHeight(for: line))
             contentSizeService.setSize(of: lineController.line, to: lineSize)
             let lineEndLocation = lineLocation + line.data.length
             if ((lineEndLocation < location) || (lineLocation == location && !isLocationEndOfString)) && line.index < lineManager.lineCount - 1 {
@@ -442,6 +446,7 @@ extension LayoutManager {
             lineController.prepareToDisplayString(in: lineLocalViewport, syntaxHighlightAsynchronously: true)
             layoutLineNumberView(for: line)
             layoutDiagnosticView(for: line)
+            layoutDiagnosticDetailView(for: line)
             // Layout line fragments ("sublines") in the line until we have filled the viewport.
             let lineYPosition = line.yPosition
             let lineFragmentControllers = lineController.lineFragmentControllers(in: insetViewport)
@@ -464,8 +469,8 @@ extension LayoutManager {
             } else {
                 lineController.setMarkedTextOnLineFragments(nil)
             }
-            let stoppedGeneratingLineFragments = lineFragmentControllers.isEmpty
-            let lineSize = CGSize(width: lineController.lineWidth, height: lineController.lineHeight)
+            let stoppedGeneratingLineFragments = lineFragmentControllers.isEmpty && !diagnosticService.diagnosticsRevealed(for: line)
+            let lineSize = CGSize(width: lineController.lineWidth, height: lineController.lineHeight + diagnosticService.totalDiagnosticsDetailHeight(for: line))
             contentSizeService.setSize(of: lineController.line, to: lineSize)
             let isSizingLineAboveTopEdge = line.yPosition < insetViewport.minY + textContainerInset.top
             if isSizingLineAboveTopEdge && lineController.isFinishedTypesetting {
@@ -489,6 +494,7 @@ extension LayoutManager {
         }
         lineNumberLabelReuseQueue.enqueueViews(withKeys: disappearedLineIDs)
         diagnosticGutterViewReuseQueue.enqueueViews(withKeys: disappearedLineIDs)
+        diagnosticDetailViewReuseQueue.enqueueViews(withKeys: disappearedLineIDs)
         lineFragmentViewReuseQueue.enqueueViews(withKeys: disappearedLineFragmentIDs)
         // Adjust the content offset on the Y-axis if necessary.
         if contentOffsetAdjustmentY != 0 {
@@ -522,7 +528,7 @@ extension LayoutManager {
     private func layoutDiagnosticView(for line: DocumentLineNode) {
         let diagnosticView = diagnosticGutterViewReuseQueue.dequeueView(forKey: line.id)
         let diagnostics = diagnosticService.diagnostics(for: line)
-        if diagnostics.isEmpty {
+        if diagnostics.isEmpty || diagnosticService.diagnosticsRevealed(for: line) {
             diagnosticView.removeFromSuperview()
             return
         } else if diagnosticView.superview == nil {
@@ -534,8 +540,30 @@ extension LayoutManager {
         var yPosition = textContainerInset.top + line.yPosition
         // Center the line number in the height of the line.
         yPosition += (lineController.lineHeight - diagnosticHeight) / 2
-        diagnosticView.setFromDiagnostics(diagnostics)
+        diagnosticView.diagnosticService = diagnosticService
+        diagnosticView.setFromDiagnostics(diagnostics, for: line)
         diagnosticView.frame = CGRect(x: xPosition, y: yPosition, width: diagnosticGutterWidthService.diagnosticWidth, height: diagnosticHeight)
+    }
+    
+    private func layoutDiagnosticDetailView(for line: DocumentLineNode) {
+        let diagnosticDetailView = diagnosticDetailViewReuseQueue.dequeueView(forKey: line.id)
+        let diagnostics = diagnosticService.diagnostics(for: line)
+        guard diagnosticService.diagnosticsRevealed(for: line) else {
+            diagnosticDetailView.removeFromSuperview()
+            return
+        }
+        if diagnosticDetailView.superview == nil {
+            textInputView?.addSubview(diagnosticDetailView)
+            diagnosticDetailView.contentOffset = .zero
+        }
+        let lineController = lineControllerStorage.getOrCreateLineController(for: line)
+        let xPosition = safeAreaInsets.left + gutterWidthService.gutterWidth
+        let yPosition = textContainerInset.top + line.yPosition + lineController.lineHeight + diagnosticService.verticalPadding
+        let width = contentSizeService.contentWidth - leadingLineSpacing - trailingLineSpacing
+        let height = diagnosticService.diagnosticsDetailHeight(for: line)
+        diagnosticDetailView.frame = CGRect(x: xPosition, y: yPosition, width: width, height: height)
+        diagnosticDetailView.diagnosticService = diagnosticService
+        diagnosticDetailView.setFromDiagnostics(diagnostics)
     }
 
     private func layoutLineFragmentView(for lineFragmentController: LineFragmentController, lineYPosition: CGFloat, lineFragmentFrame: inout CGRect) {
