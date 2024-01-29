@@ -1162,12 +1162,8 @@ private extension TextView {
         }
     }
     
-    @objc private func handleAtomicTap(_ gestureRecognizer: UITapGestureRecognizer) {
-        let point = gestureRecognizer.location(in: textInputView)
-        
-        if let textPosition = closestPosition(to: point),
-           let range = tokenizer.rangeEnclosingPosition(textPosition, with: .word, inDirection: .layout(.right)),
-           !range.isEmpty {
+    @objc private func handleAtomicTap(_ gestureRecognizer: AtomicTapGesture) {
+        if let range = gestureRecognizer.range {
             atomicallySelect(range: range)
             print("atomic tap!!")
         }
