@@ -1582,9 +1582,13 @@ extension TextView {
         let start = offset(from: beginningOfDocument, to: range.start)
         highlightedRanges = [.init(range: .init(location: start, length: offset(from: beginningOfDocument, to: range.end) - start), color: UIColor(red: 42 / 255, green: 120 / 255, blue: 235 / 255, alpha: 1), cornerRadius: 6)]
         
-        insertionPointColor = .clear
-        selectionBarColor = .clear
-        selectionHighlightColor = .clear
+        if range.isEmpty {
+            textInputView.resetSelectionColors()
+        } else {
+            insertionPointColor = .clear
+            selectionBarColor = .clear
+            selectionHighlightColor = .clear
+        }
         
         selectHighlightedRange(at: 0)
     }
