@@ -84,29 +84,6 @@ class AtomicTapGesture: UITapGestureRecognizer {
             }
         }
         
-        if let characterRange = view.tokenizer.rangeEnclosingPosition(position, with: .character, inDirection: .layout(.right)) {
-            let start = view.offset(from: view.beginningOfDocument, to: characterRange.start)
-            let end = view.offset(from: view.beginningOfDocument, to: characterRange.end)
-            
-            print("token range!", start, end)
-            
-            if let character = view.text(in: NSRange(location: start, length: end - start)) {
-                print("char token!", character)
-                for characterPair in view.characterPairs {
-                    if character == characterPair.leading {
-                        // find the ending one & select what's in between them
-                        break
-                    }
-                    
-                    if character == characterPair.trailing {
-                        // find the leading one & select what's in between them
-                        break
-                    }
-                }
-            }
-        }
-        
-        
         return nil
     }
     
