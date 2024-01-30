@@ -17,19 +17,17 @@ class AtomicTapGesture: UITapGestureRecognizer {
     private func getCharacterPairRange(for character: String, from position: Int, in view: TextView) -> NSRange? {
         for characterPair in view.characterPairs {
             if character == characterPair.leading {
-                if let trailingPosition = view.text.findNextOccurrence(of: Character(characterPair.trailing), after: position) {
+                if let trailingPosition = view.text.findNextOccurrence(of: Character(characterPair.trailing), after: position),
+                trailingPosition > position {
                     return NSRange(location: position + 1, length: max(trailingPosition - position - 1, 0))
                 }
-                
-                break
             }
             
             if character == characterPair.trailing {
-                if let leadingPosition = view.text.findPreviousOccurrence(of: Character(characterPair.leading), before: position) {
+                if let leadingPosition = view.text.findPreviousOccurrence(of: Character(characterPair.leading), before: position),
+                position > leadingPosition {
                     return NSRange(location: leadingPosition + 1, length: max(position - leadingPosition - 1, 0))
                 }
-                
-                break
             }
         }
         
@@ -157,10 +155,10 @@ extension String {
             return nil // Position is out of bounds
         }
         
-        let startIndex = index(startIndex, offsetBy: position)
-        let range = startIndex..<endIndex
+        let startSearchIndex = index(startIndex, offsetBy: position)
+        let searchRange = startSearchIndex..<endIndex
         
-        if let nextPosition = self[range].firstIndex(of: character) {
+        if let nextPosition = self[searchRange].firstIndex(of: character) {
             return distance(from: startIndex, to: nextPosition)
         } else {
             return nil // Character not found
