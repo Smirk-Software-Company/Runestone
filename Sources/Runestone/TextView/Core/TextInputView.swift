@@ -128,6 +128,21 @@ final class TextInputView: UIView, UITextInput {
     override var undoManager: UndoManager? {
         timedUndoManager
     }
+    var atomicSelection: UITextRange? {
+        didSet {
+            // Don't allow edit menu to show if we've made a new atomic selection
+            if let atomicSelection {                
+                if let oldValue, atomicSelection.equalTo(oldValue, in: self) {
+                    canShowEditMenu = true
+                } else {
+                    canShowEditMenu = false
+                }
+            } else {
+                canShowEditMenu = true
+            }
+        }
+    }
+    private var canShowEditMenu: Bool = true
 
     // MARK: - Appearance
     var theme: Theme {
@@ -406,7 +421,7 @@ final class TextInputView: UIView, UITextInput {
             }
         }
     }
-    private var estimatedLineHeight: CGFloat {
+    var estimatedLineHeight: CGFloat {
         theme.font.totalLineHeight * lineHeightMultiplier
     }
     var highlightedRanges: [HighlightedRange] {
@@ -779,6 +794,8 @@ final class TextInputView: UIView, UITextInput {
     }
 
     override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+        guard canShowEditMenu else { return false }
+        
         if action == #selector(copy(_:)) {
             if let selectedTextRange = selectedTextRange {
                 return !selectedTextRange.isEmpty
@@ -805,6 +822,12 @@ final class TextInputView: UIView, UITextInput {
             }
         } else {
             return super.canPerformAction(action, withSender: sender)
+        }
+    }
+    
+    override func buildMenu(with builder: UIMenuBuilder) {
+        if #available(iOS 17.0, *) {
+            builder.remove(menu: .autoFill)
         }
     }
 
@@ -1062,6 +1085,9 @@ private extension TextInputView {
 extension TextInputView {
     func beginFloatingCursor(at point: CGPoint) {
         if floatingCaretView == nil, let position = closestPosition(to: point) {
+            // Reset insertion & selection colors in case they were set to clear
+            resetSelectionColors()
+            
             insertionPointColorBeforeFloatingBegan = insertionPointColor
             insertionPointColor = insertionPointColorBeforeFloatingBegan.withAlphaComponent(0.5)
             updateCaretColor()
@@ -1090,6 +1116,12 @@ extension TextInputView {
         floatingCaretView?.removeFromSuperview()
         floatingCaretView = nil
         delegate?.textInputViewDidEndFloatingCursor(self)
+    }
+    
+    func resetSelectionColors() {
+        insertionPointColor = .label
+        selectionBarColor = .label
+        selectionHighlightColor = .label.withAlphaComponent(0.2)
     }
 
     private func updateCaretColor() {
