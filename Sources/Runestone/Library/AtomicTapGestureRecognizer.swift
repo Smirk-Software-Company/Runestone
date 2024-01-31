@@ -40,8 +40,6 @@ class AtomicTapGesture: UITapGestureRecognizer {
            !wordRange.isEmpty {
             let start = view.offset(from: view.beginningOfDocument, to: wordRange.start)
             let end = view.offset(from: view.beginningOfDocument, to: wordRange.end)
-            print("word range", wordRange, view.text(in: NSRange(location: start, length: end - start)))
-//            return nil
             return wordRange
         }
         
@@ -50,8 +48,6 @@ class AtomicTapGesture: UITapGestureRecognizer {
         let beforeCursorRange = NSRange(location: startPosition - 1, length: 1)
         if let beforeCursorCharacter = view.text(in: beforeCursorRange),
            !beforeCursorCharacter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            print("before cursor", beforeCursorCharacter)
-            
             if let characterPairRange = getCharacterPairRange(for: beforeCursorCharacter, from: beforeCursorRange.location, in: view),
                let range = view.textRange(from: characterPairRange) {
                 return range
@@ -60,19 +56,11 @@ class AtomicTapGesture: UITapGestureRecognizer {
             if let range = view.textRange(from: beforeCursorRange) {
                 return range
             }
-            
-            print("no ret")
-            
-            // first check for char pair
-            // if char pair, return interior range
-            // else return the 1 character since it's not empty
         }
         
         let afterCursorRange = NSRange(location: startPosition, length: 1)
         if let afterCursorCharacter = view.text(in: afterCursorRange),
            !afterCursorCharacter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            print("after cursor", afterCursorCharacter)
-            
             if let characterPairRange = getCharacterPairRange(for: afterCursorCharacter, from: afterCursorRange.location, in: view),
                let range = view.textRange(from: characterPairRange) {
                 return range
