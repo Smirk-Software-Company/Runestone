@@ -1150,7 +1150,6 @@ private extension TextView {
             return
         }
         if gestureRecognizer.state == .ended {
-            print("handle runestone tap")
             let point = gestureRecognizer.location(in: textInputView)
             let oldSelectedRange = textInputView.selectedRange
             textInputView.moveCaret(to: point)
@@ -1165,7 +1164,6 @@ private extension TextView {
     @objc private func handleAtomicTap(_ gestureRecognizer: AtomicTapGesture) {
         if let range = gestureRecognizer.range {
             atomicallySelect(range: range)
-            print("atomic tap!!")
         }
     }
 
@@ -1546,8 +1544,6 @@ extension TextView: UITextInteractionDelegate {
                     isNewAtomicSelection = true
                 }
             }
-            
-            print("interaction should begin -- atomic", !isNewAtomicSelection)
             
             return isEditable && !isNewAtomicSelection
         } else if interaction.textInteractionMode == .nonEditable {
