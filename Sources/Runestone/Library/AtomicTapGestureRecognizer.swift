@@ -14,6 +14,7 @@ class AtomicTapGesture: UITapGestureRecognizer {
         delaysTouchesEnded = false
     }
     
+    // TODO: for character pairs with the same leading & trailing (such as "), we need to ensure we search in the right direction. sometimes we search in the wrong direction and don't select a proper token. we probably need to incorporate the syntax highlighting & token logic here
     private func getCharacterPairRange(for character: String, from position: Int, in view: TextView) -> NSRange? {
         for characterPair in view.characterPairs {
             if character == characterPair.leading {
