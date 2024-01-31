@@ -107,16 +107,13 @@ class AtomicTapGesture: UITapGestureRecognizer {
         // Ensure range rect is touchable size
         var rangeRect = view.firstRect(for: range)
         let oldSize = rangeRect.size
-        rangeRect.size.width = max(rangeRect.width, 20)
-        rangeRect.size.height = max(rangeRect.height, view.estimatedLineHeight)
+        rangeRect.size.width = max(rangeRect.width, 20) + 40
+        rangeRect.size.height = max(rangeRect.height, view.estimatedLineHeight) + 30
         rangeRect.origin.x -= (rangeRect.width - oldSize.width) / 2
         rangeRect.origin.y -= (rangeRect.height - oldSize.height) / 2
-        
-        print(rangeRect, location)
 
         // Ensures the touch was actually over the word
         guard rangeRect.contains(location) else {
-            print("range rect no contain!")
             state = .failed
             return
         }
