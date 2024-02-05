@@ -676,6 +676,7 @@ open class TextView: UIScrollView {
         keyboardObserver.delegate = self
         highlightNavigationController.delegate = self
         textSearchingHelper.textView = self
+        alwaysBounceVertical = true
     }
 
     /// The initializer has not been implemented.
