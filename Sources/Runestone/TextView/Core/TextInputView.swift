@@ -472,7 +472,7 @@ final class TextInputView: UIView, UITextInput {
                 layoutManager.setNeedsLayout()
                 layoutManager.layoutIfNeeded()
                 if !preserveUndoStackWhenSettingString {
-                    undoManager?.removeAllActions()
+//                    undoManager?.removeAllActions()
                 }
             }
         }
@@ -857,7 +857,7 @@ final class TextInputView: UIView, UITextInput {
                 timedUndoManager.endUndoGrouping()
             }
         } else {
-            timedUndoManager.removeAllActions()
+//            timedUndoManager.removeAllActions()
         }
         if let oldSelectedRange = selectedRange {
             inputDelegate?.selectionWillChange(self)
