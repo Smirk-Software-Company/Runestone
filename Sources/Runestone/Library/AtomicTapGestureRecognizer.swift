@@ -36,10 +36,13 @@ class AtomicTapGesture: UITapGestureRecognizer {
     }
     
     private func getTokenRange(at position: UITextPosition, in view: TextView) -> UITextRange? {
-        if let wordRange = view.tokenizer.rangeEnclosingPosition(position, with: .word, inDirection: .layout(.right)),
-           !wordRange.isEmpty {
-            let start = view.offset(from: view.beginningOfDocument, to: wordRange.start)
-            let end = view.offset(from: view.beginningOfDocument, to: wordRange.end)
+        if let wordRange = view.tokenizer.rangeEnclosingPosition(position, with: .word, inDirection: .storage(.forward)) ?? view.tokenizer.rangeEnclosingPosition(position, with: .word, inDirection: .storage(.backward)),
+           !wordRange.isEmpty,
+           let text = view.text(in: wordRange),
+           !text.allSatisfy({ character in
+               let string = String(character)
+               return view.characterPairs.contains(where: { $0.leading == string || $0.trailing == string })
+           }) {
             return wordRange
         }
         
