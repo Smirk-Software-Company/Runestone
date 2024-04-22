@@ -1,6 +1,6 @@
 name: Deploy Documentation
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
 permissions:
   contents: read
   pages: write
@@ -8,24 +8,23 @@ permissions:
 concurrency:
   group: "pages"
   cancel-in-progress: true
-env:
-  DEVELOPER_DIR: /Applications/Xcode_15.0.1.app/Contents/Developer
 jobs:
   build:
-    runs-on: macos-13
+    name: Build Documentation
+    runs-on: macos-14
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
+        uses: actions/checkout@v4
       - name: Setup Pages
-        uses: actions/configure-pages@v2
+        uses: actions/configure-pages@v4
       - name: Build Documentation
         run: |
+          set -o pipefail &&\
           xcodebuild docbuild\
             -scheme Runestone\
             -destination 'generic/platform=iOS'\
-            -derivedDataPath ../DerivedData
+            -derivedDataPath ../DerivedData\
+          | xcbeautify --renderer github-actions
       - name: Process Archive
         run: |
           mkdir _site
@@ -48,8 +47,9 @@ jobs:
           </html>
           EOM
       - name: Upload Artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
   deploy:
+    name: Deploy Documentation
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -58,4 +58,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4

@@ -185,7 +185,7 @@ open class TextView: UIScrollView {
             }
         }
         set {
-            textInputView.selectedRange = newValue
+            textInputView.selectedTextRange = IndexedRange(newValue)
         }
     }
     /// The current selection range of the text view as a UITextRange.
@@ -197,6 +197,7 @@ open class TextView: UIScrollView {
             textInputView.selectedTextRange = newValue
         }
     }
+    #if compiler(<5.9) || !os(visionOS)
     /// The custom input accessory view to display when the receiver becomes the first responder.
     override public var inputAccessoryView: UIView? {
         get {
@@ -210,10 +211,13 @@ open class TextView: UIScrollView {
             _inputAccessoryView = newValue
         }
     }
+    #endif
+    #if compiler(<5.9) || !os(visionOS)
     /// The input assistant to use when configuring the keyboard's shortcuts bar.
     override public var inputAssistantItem: UITextInputAssistantItem {
         textInputView.inputAssistantItem
     }
+    #endif
     /// Returns a Boolean value indicating whether this object can become the first responder.
     override public var canBecomeFirstResponder: Bool {
         !textInputView.isFirstResponder && isEditable
@@ -613,7 +617,6 @@ open class TextView: UIScrollView {
     private let tapGestureRecognizer = QuickTapGestureRecognizer()
     private let atomicTapGestureRecognizer = AtomicTapGesture()
     private var _inputAccessoryView: UIView?
-    private let _inputAssistantItem = UITextInputAssistantItem()
     private var isPerformingNonEditableTextInteraction = false
     private var delegateAllowsEditingToBegin: Bool {
         guard isEditable else {
